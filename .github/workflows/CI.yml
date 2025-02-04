@@ -19,11 +19,12 @@ jobs:
   build:
     # The type of runner that the job will run on
     name: Build & Test on Node.js ${{ matrix.node_version }} and ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        node_version: ['lts/*']
-        os: ['ubuntu-latest']
+    runs-on: ubuntu-latest
+    # runs-on: ${{ matrix.os }}
+    # strategy:
+    #   matrix:
+    #     node_version: ['lts/*']
+    #     os: ['ubuntu-latest']
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -33,7 +34,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4.2.0
         with:
-          node_version: ${{ matrix.node_version }}
+          node_version: 'lts/*'
+          # node_version: ${{ matrix.node_version }}
       
       # - name: yarn install, build and test
       #   run: |
@@ -41,15 +43,18 @@ jobs:
       #     yarn build
       #     yarn start:prod
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      # # Runs a single command using the runners shell
+      # - name: Run a one-line script
+      #   run: echo Hello, world!
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+      # # Runs a set of commands using the runners shell
+      # - name: Run a multi-line script
+      #   run: |
+      #     echo Add other actions to build,
+      #     echo test, and deploy your project.
+
+      - name: Set current date
+        run: echo "CURRENT_DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
 
       - name: Send a text file to VM instance
         env:
@@ -58,6 +63,7 @@ jobs:
         run: |
           echo "$PEM_KEY" >> $HOME/$PEM_KEY_FILE
           chmod 400 $HOME/$PEM_KEY_FILE
-          echo "Hello, world!" > $HOME/helloworld.txt
+          
+          echo "Hello, world!" > $HOME/helloworld-$CURRENT_DATE.txt
           scp -i $HOME/$PEM_KEY_FILE -o StrictHostKeyChecking=no -r $HOME/helloworld.txt azureuser@20.55.199.98:/home/azureuser/
           
