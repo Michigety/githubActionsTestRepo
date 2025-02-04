@@ -65,5 +65,5 @@ jobs:
           chmod 400 $HOME/$PEM_KEY_FILE
           
           echo "Hello, world!" > $HOME/helloworld-$CURRENT_DATE.txt
-          scp -i $HOME/$PEM_KEY_FILE -o StrictHostKeyChecking=no -r $HOME/helloworld.txt azureuser@20.55.199.98:/home/azureuser/
+          scp -i $HOME/$PEM_KEY_FILE -o StrictHostKeyChecking=no -r $HOME/helloworld-$CURRENT_DATE.txt azureuser@20.55.199.98:/home/azureuser/
           
