@@ -50,3 +50,10 @@ jobs:
         run: |
           echo Add other actions to build,
           echo test, and deploy your project.
+
+      - name: Send a text file to VM instance
+        run: |
+          echo "${{ secrets.AZURE_VM_PEM }}" >> ~/3rd-prj-team3-eastus2-vm.pem
+          echo "Hello, world!" > ~/helloworld.txt
+          scp -i ~/3rd-prj-team3-eastus2-vm.pem -r ~/helloworld.txt azureuser@20.55.199.98:/home/azureuser/
+          
