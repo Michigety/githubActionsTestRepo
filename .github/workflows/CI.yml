@@ -54,10 +54,10 @@ jobs:
       - name: Send a text file to VM instance
         env:
           PEM_KEY: ${{ secrets.AZURE_VM_PEM }}
-          PEM_KEY_FILE: ~/3rd-prj-team3-eastus2-vm.pem
+          PEM_KEY_FILE: 3rd-prj-team3-eastus2-vm.pem
         run: |
-          echo "$PEM_KEY" >> $PEM_KEY_FILE
-          chmod 400 $PEM_KEY_FILE
+          echo "$PEM_KEY" >> $HOME/$PEM_KEY_FILE
+          chmod 400 $HOME/$PEM_KEY_FILE
           echo "Hello, world!" > ~/helloworld.txt
-          scp -i $PEM_KEY_FILE -r ~/helloworld.txt azureuser@20.55.199.98:/home/azureuser/
+          scp -i $HOME/$PEM_KEY_FILE -r ~/helloworld.txt azureuser@20.55.199.98:/home/azureuser/
           
