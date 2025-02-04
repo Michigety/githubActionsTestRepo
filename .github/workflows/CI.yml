@@ -58,6 +58,6 @@ jobs:
         run: |
           echo "$PEM_KEY" >> $HOME/$PEM_KEY_FILE
           chmod 400 $HOME/$PEM_KEY_FILE
-          echo "Hello, world!" > ~/helloworld.txt
-          scp -i $HOME/$PEM_KEY_FILE -r ~/helloworld.txt azureuser@20.55.199.98:/home/azureuser/
+          echo "Hello, world!" > $HOME/helloworld.txt
+          scp -i $HOME/$PEM_KEY_FILE -o StrictHostKeyChecking=no -r $HOME/helloworld.txt azureuser@20.55.199.98:/home/azureuser/
           
