@@ -1,0 +1,109 @@
+# For NodeJS Environment
+# build, deploy 분리된 jobs 예시
+name: CI/CD - NodeJS (Example)
+
+on:
+  # 아래 부분은 트리거라서, 주석 안 하면 매번 동작하기 때문에 주석 처리해 둔 것.
+  # 실사용 시에는 반드시 주석 해제할 것.
+  # push:
+  #   branches: [ "main" ]
+  # pull_request:
+  #   branches: [ "main" ]
+
+  workflow_dispatch:
+
+# Workflow 전역 환경 변수
+# env에서는 스크립트 실행 구문이 먹히지 않고, 오직 정적 문자열로만 처리됨.
+env:
+  helloworld: Hello World
+  ZIP_FILENAME: HelloActions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Workflow Content(~= Job)별 환경 변수
+    # env:
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      
+      - name: yarn install --frozen-lockfile
+        run: yarn --frozen-lockfile
+
+      # Linting은 일반적으로 Actions에 포함시키진 않음.
+      # 로컬에서 리모트로 push 하기 전에, Linting 완료 후 push 하는 걸 추천한다 했었음.
+      # - name: yarn lint
+      #   run: yarn lint
+
+      - name: yarn test --coverage
+        run: yarn test --coverage
+
+      - name: yarn build
+        run: yarn build
+
+      # 위의 yarn 명령어들을 분할하지 말고, multi-line으로 만들어도 아무런 상관없음. 
+      # - name: yarn install, build and test
+      #   run: |
+      #     yarn --frozen-lockfile
+      # #     yarn lint
+      #     yarn test --coverage
+      #     yarn build
+
+      # Zip으로 압축할 때 Silent option 사용 권장.
+      # NodeJS Workflow의 경우에는 node_modules/ 때문에 Actions Log에 몇만 줄 써지므로 보기 귀찮아짐.
+      # 변수 사용은 run step에서 $NAME 또는 ${{ env.NAME }} 둘 다 사용 가능.
+      - name: Zip artifact for deployment
+        run: zip -T -q -r ${{ env.ZIP_FILENAME }}.zip ./package* ./yarn.lock ./dist ./node_modules && echo "Success." || echo "Failure."
+
+      # Github의 임시 저장소로 업로드해두고, 다음 작업 영역에서 다운로드할 수 있게끔 만듬.
+      # with step에서는 반드시 ${{ env.Name }}으로 변수 접근할 것.
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: ${{ env.ZIP_FILENAME }}.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
+
+      # 동적 변수를 활용하고 싶으면 아래 예시처럼 사용할 것.
+      # TMI. 고유값 사용을 위해 $GITHUB_ENV를 사용하면 안 되는 이유.
+      # ${{ env.var }}는 run 구문에서는 runtime에 동작하고, with 구문에서는 초기 해석 단계에 동작하기 떄문에 값이 바뀔 수 있음.
+      - name: Set current date
+        id: set_date
+        run: echo "CURRENT_DATE=$(date +'%Y%m%d_%H:%M:%S')" >> $GITHUB_OUTPUT
+
+      - name: Deploy to VM instance
+        env:
+          VM_SSH_ADDR: azureuser@20.55.199.98
+          UPLOAD_PATH: /home/azureuser/medly
+          PEM_KEY: ${{ secrets.AZURE_VM_PEM }}
+          PEM_KEY_FILE: 3rd-prj-team3-eastus2-vm.pem
+        run: |
+          echo "$PEM_KEY" >> $PEM_KEY_FILE
+          chmod 400 $PEM_KEY_FILE
+
+          mv ${{ env.ZIP_FILENAME }}.zip ${{ env.ZIP_FILENAME }}-${{ steps.set_date.outputs.CURRENT_DATE }}.zip
+
+          ssh -i $PEM_KEY_FILE -o StrictHostKeyChecking=no $VM_SSH_ADDR "\
+            sudo systemctl stop medly.service; \
+            rm -rf $UPLOAD_PATH/*"
+
+          scp -i $PEM_KEY_FILE -o StrictHostKeyChecking=no -r \
+            ./${{ env.ZIP_FILENAME }}-${{ steps.set_date.outputs.CURRENT_DATE }}.zip \
+            $VM_SSH_ADDR:$UPLOAD_PATH/
+
+          ssh -i $PEM_KEY_FILE -o StrictHostKeyChecking=no $VM_SSH_ADDR "\
+            unzip $UPLOAD_PATH/${{ env.ZIP_FILENAME }}-${{ steps.set_date.outputs.CURRENT_DATE }}.zip -d $UPLOAD_PATH; \
+            sudo systemctl start medly; \
+            sudo systemctl restart nginx"
