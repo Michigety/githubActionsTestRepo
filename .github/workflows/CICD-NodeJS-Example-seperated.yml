@@ -1,6 +1,6 @@
 # For NodeJS Environment
 # build, deploy 분리된 jobs 예시
-name: CI/CD - NodeJS (Example)
+name: CI/CD - NodeJS (Example, Seperated)
 
 on:
   # 아래 부분은 트리거라서, 주석 안 하면 매번 동작하기 때문에 주석 처리해 둔 것.
